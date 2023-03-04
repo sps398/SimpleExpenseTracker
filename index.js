@@ -61,7 +61,7 @@ function render() {
     const ul = document.getElementById('ul');
     ul.innerHTML = '';
 
-    const arrEx = JSON.parse(localStorage.getItem('db'));
+    const arrEx = JSON.parse(localStorage.getItem('db')) || [];
     for(let i=0;i<arrEx.length;i++) {
         const obj = arrEx[i];
 
