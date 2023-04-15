@@ -6,10 +6,17 @@ const type = document.getElementById('type');
 const submit = document.getElementById('submit');
 const details = document.getElementById('details');
 const ul = document.getElementById('ul');
+const expenseId = document.getElementById('id');
 
-render();
+const axiosInstance = axios.create({
+    baseURL: 'http://localhost:3000'
+});
 
-form.addEventListener('submit', (e) => {
+window.addEventListener('DOMContentLoaded', () => {
+    render();
+});
+
+form.addEventListener('submit', async (e) => {
     e.preventDefault();
 
     if(expense.value == '' || desc.value=='' || type.value=='') {
@@ -19,62 +26,49 @@ form.addEventListener('submit', (e) => {
     
     const newExpense = {
         expense: expense.value,
-        desc: desc.value,
-        type: type.value
+        description: desc.value,
+        category: type.value
     }
 
-    const arrEx = JSON.parse(localStorage.getItem('db')) || [];
-    arrEx.push(newExpense);
-    localStorage.setItem('db', JSON.stringify(arrEx));
+    console.log(newExpense);
+
+    if(submit.innerText == 'Update Expense') {
+        await axiosInstance.post(`/update-expense/${expenseId.value}`, newExpense);
+        submit.innerText = 'Add Expense';
+    }
+
+    else {
+        try {
+            await axiosInstance.post('/add-expense', newExpense);
+        } catch(err) {
+            console.log(err);
+        }
+    }
 
     form.reset();
     render();
 });
 
-function onDeleteClick(dt) {
-    dt.addEventListener('click', (e) => {
-        const id = e.target.parentNode.id;
-        const arrEx = JSON.parse(localStorage.getItem('db'));
-        arrEx.splice(Number(id), 1);
-        localStorage.setItem('db', JSON.stringify(arrEx));
-
-        render();
-    });
-}
-
-function onEditClick(edit) {
-    edit.addEventListener('click', (e) => {
-        const id = e.target.parentNode.id;
-        const arrEx = JSON.parse(localStorage.getItem('db'));
-        const curr = arrEx[Number(id)];
-        expense.value = curr.expense;
-        desc.value = curr.desc;
-        type.value = curr.type;
-        arrEx.splice(Number(id), 1);
-        localStorage.setItem('db', JSON.stringify(arrEx));
-
-        render();
-    });
-}
-
-function render() {
+async function render() {
     const ul = document.getElementById('ul');
     ul.innerHTML = '';
 
-    const arrEx = JSON.parse(localStorage.getItem('db'));
-    for(let i=0;i<arrEx.length;i++) {
-        const obj = arrEx[i];
+    const result = await axiosInstance.get('/expenses');
+    const expenses = result.data;
+
+    for(let i=0;i<expenses.length;i++) {
+        const curr = expenses[i];
 
         const li = document.createElement('li');
         const p = document.createElement('p');
         const dt = document.createElement('button');
         const edit = document.createElement('button');
         p.className = 'd-inline-block';
-        p.innerText = `${obj.expense}-${obj.type}-${obj.desc}`;
+        p.innerText = `${curr.expense}-${curr.category}-${curr.description}`;
         dt.innerHTML='Delete Expense';
         edit.innerHTML='Edit Expense';
 
-        li.id = i.toString();
+        li.id = curr.id;
         dt.id = 'Delete';
         edit.id = 'Edit';
 
@@ -83,8 +77,13 @@ function render() {
         dt.className = 'btn btn-sm btn-secondary col-sm-2';
         edit.className = 'btn btn-sm btn-secondary col-sm-2';
 
-        onDeleteClick(dt);
-        onEditClick(edit);
+        edit.addEventListener('click', (e) => {
+            editExpense(curr);
+        });
+
+        dt.addEventListener('click', (e) => {
+            deleteExpense(curr.id);
+        });
 
         li.appendChild(p);
         li.appendChild(dt); 
@@ -92,4 +91,17 @@ function render() {
         ul.appendChild(li);
     }
     details.appendChild(ul);
-}   
+}
+
+function editExpense(curr) {
+    expense.value = curr.expense;
+    desc.value = curr.description;
+    type.value = curr.category;
+    expenseId.value = curr.id;
+    submit.innerText = 'Update Expense';
+}
+
+async function deleteExpense(id) {
+    await axiosInstance.post(`/delete-expense/${id}`);
+    render();
+}
